@@ -104,10 +104,17 @@ Discover all URLs from a site via sitemap.xml parsing and homepage link crawling
 | Full site crawl | Yes | Yes |
 | Site map | Yes | Yes |
 | Clone with assets | **Yes** | No |
-| JS rendering | No (static HTML) | Yes |
-| Anti-bot bypass | No | Yes |
+| JS rendering | **Yes** (via Playwright) | Yes |
+| Anti-bot bypass | Partial (UA rotation, headers, delays) | Yes |
 
-deepcrawl handles static sites perfectly. For JS-heavy SPAs that require browser rendering, Firecrawl or PageMap are better choices.
+deepcrawl handles static sites out of the box. For JS-heavy SPAs (React, Next.js, SvelteKit), install Playwright for full rendering:
+
+```bash
+npm install -g playwright
+npx playwright install chromium
+```
+
+Once installed, deepcrawl auto-detects Playwright and enables JS rendering. Use `jsRender: true` on any tool to activate it. All tools also include UA rotation, realistic browser headers, and random delays to avoid basic bot detection.
 
 ## Also by Soflution
 

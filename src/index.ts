@@ -21,25 +21,111 @@ import { URL } from "url";
 import { homedir } from "os";
 
 const SERVER_NAME = "deepcrawl-mcp";
-const SERVER_VERSION = "1.0.0";
+const SERVER_VERSION = "1.1.0";
 const MAX_CONCURRENT = 5;
 const DEFAULT_TIMEOUT = 15000;
 const MAX_PAGES = 100;
 
+// ─── Playwright Detection (optional) ─────────────────────────────────
+
+let playwright: any = null;
+let playwrightAvailable = false;
+
+async function detectPlaywright(): Promise<void> {
+  try {
+    // @ts-ignore - playwright is optional
+    playwright = await import("playwright");
+    playwrightAvailable = true;
+    console.error("[deepcrawl] Playwright detected - JS rendering enabled");
+  } catch {
+    playwrightAvailable = false;
+    console.error("[deepcrawl] Playwright not found - using static fetch (install playwright for JS rendering)");
+  }
+}
+
+// ─── Anti-bot: User-Agent rotation ───────────────────────────────────
+
+const USER_AGENTS = [
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0",
+];
+
+function randomUA(): string {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+function randomDelay(min = 200, max = 1200): Promise<void> {
+  return new Promise(r => setTimeout(r, min + Math.random() * (max - min)));
+}
+
 // ─── HTTP Fetch ───────────────────────────────────────────────────────
 
-const HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-  "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
-  "Accept-Encoding": "identity",
-};
+function getHeaders(): Record<string, string> {
+  return {
+    "User-Agent": randomUA(),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
+    "Accept-Encoding": "identity",
+    "Cache-Control": "no-cache",
+    "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"macOS"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+  };
+}
 
-async function fetchPage(url: string, timeoutMs = DEFAULT_TIMEOUT): Promise<{ html: string; finalUrl: string; status: number } | null> {
+// ─── Playwright Fetch (JS rendering) ─────────────────────────────────
+
+async function fetchWithPlaywright(url: string, timeoutMs = DEFAULT_TIMEOUT): Promise<{ html: string; finalUrl: string; status: number } | null> {
+  if (!playwright) return null;
+  let browser;
+  try {
+    browser = await playwright.chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      userAgent: randomUA(),
+      viewport: { width: 1920, height: 1080 },
+      locale: "en-US",
+    });
+    const page = await context.newPage();
+    const response = await page.goto(url, { waitUntil: "networkidle", timeout: timeoutMs });
+    if (!response) return null;
+    // Wait for dynamic content
+    await page.waitForTimeout(1500);
+    const html = await page.content();
+    const finalUrl = page.url();
+    const status = response.status();
+    await browser.close();
+    return { html, finalUrl, status };
+  } catch {
+    if (browser) await browser.close().catch(() => {});
+    return null;
+  }
+}
+
+// ─── Standard Fetch ──────────────────────────────────────────────────
+
+async function fetchPage(url: string, timeoutMs = DEFAULT_TIMEOUT, jsRender = false): Promise<{ html: string; finalUrl: string; status: number } | null> {
+  // Try Playwright first if JS rendering requested and available
+  if (jsRender && playwrightAvailable) {
+    const result = await fetchWithPlaywright(url, timeoutMs);
+    if (result) return result;
+    // Fallback to standard fetch
+  }
+  
+  await randomDelay();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: controller.signal, redirect: "follow", headers: HEADERS });
+    const res = await fetch(url, { signal: controller.signal, redirect: "follow", headers: getHeaders() });
     clearTimeout(timer);
     if (!res.ok) return null;
     const html = await res.text();
@@ -48,10 +134,11 @@ async function fetchPage(url: string, timeoutMs = DEFAULT_TIMEOUT): Promise<{ ht
 }
 
 async function fetchBinary(url: string, timeoutMs = DEFAULT_TIMEOUT): Promise<Buffer | null> {
+  await randomDelay(100, 600);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: controller.signal, redirect: "follow", headers: { "User-Agent": HEADERS["User-Agent"] } });
+    const res = await fetch(url, { signal: controller.signal, redirect: "follow", headers: { "User-Agent": randomUA() } });
     clearTimeout(timer);
     if (!res.ok) return null;
     return Buffer.from(await res.arrayBuffer());
@@ -111,8 +198,8 @@ interface ScrapeResult {
   metadata: Record<string, string>;
 }
 
-async function scrapePage(url: string, options: { includeLinks?: boolean; includeImages?: boolean; mainContentOnly?: boolean } = {}): Promise<ScrapeResult> {
-  const page = await fetchPage(url);
+async function scrapePage(url: string, options: { includeLinks?: boolean; includeImages?: boolean; mainContentOnly?: boolean; jsRender?: boolean } = {}): Promise<ScrapeResult> {
+  const page = await fetchPage(url, DEFAULT_TIMEOUT, options.jsRender ?? false);
   if (!page) throw new Error(`Failed to fetch ${url}`);
   
   const $ = cheerio.load(page.html);
@@ -199,9 +286,10 @@ function sanitizeFilename(url: string, base: string): string {
   }
 }
 
-async function clonePage(url: string, outputDir: string, options: { depth?: number; sameOriginOnly?: boolean } = {}): Promise<CloneResult> {
-  const depth = options.depth ?? 0; // 0 = single page, 1+ = follow links
+async function clonePage(url: string, outputDir: string, options: { depth?: number; sameOriginOnly?: boolean; jsRender?: boolean } = {}): Promise<CloneResult> {
+  const depth = options.depth ?? 0;
   const sameOriginOnly = options.sameOriginOnly ?? true;
+  const jsRender = options.jsRender ?? false;
   const baseUrl = new URL(url);
   const visited = new Set<string>();
   const assetUrls = new Set<string>();
@@ -218,7 +306,7 @@ async function clonePage(url: string, outputDir: string, options: { depth?: numb
     if (visited.has(pageUrl)) continue;
     visited.add(pageUrl);
     
-    const page = await fetchPage(pageUrl);
+    const page = await fetchPage(pageUrl, DEFAULT_TIMEOUT, jsRender);
     if (!page) continue;
     
     const $ = cheerio.load(page.html);
@@ -337,7 +425,7 @@ interface CrawlResult {
   errors: string[];
 }
 
-async function crawlSite(url: string, options: { maxPages?: number; sameOriginOnly?: boolean; includeImages?: boolean } = {}): Promise<CrawlResult> {
+async function crawlSite(url: string, options: { maxPages?: number; sameOriginOnly?: boolean; includeImages?: boolean; jsRender?: boolean } = {}): Promise<CrawlResult> {
   const maxPages = Math.min(options.maxPages ?? 20, MAX_PAGES);
   const sameOriginOnly = options.sameOriginOnly ?? true;
   const baseUrl = new URL(url);
@@ -353,7 +441,7 @@ async function crawlSite(url: string, options: { maxPages?: number; sameOriginOn
       batch.filter(u => !visited.has(u)).map(async (pageUrl) => {
         visited.add(pageUrl);
         try {
-          const result = await scrapePage(pageUrl, { includeLinks: true, includeImages: options.includeImages ?? false, mainContentOnly: true });
+          const result = await scrapePage(pageUrl, { includeLinks: true, includeImages: options.includeImages ?? false, mainContentOnly: true, jsRender: options.jsRender ?? false });
           pages.push({ url: result.url, title: result.title, markdown: result.markdown });
           
           // Add discovered links to queue
@@ -504,10 +592,11 @@ server.tool(
     mainContentOnly: z.boolean().optional().describe("Extraire uniquement le contenu principal, pas la nav/footer (défaut: true)"),
     includeLinks: z.boolean().optional().describe("Inclure les liens trouvés (défaut: true)"),
     includeImages: z.boolean().optional().describe("Inclure les URLs des images (défaut: true)"),
+    jsRender: z.boolean().optional().describe("Rendre le JavaScript via Playwright pour les sites dynamiques/SPA (défaut: false, nécessite playwright installé)"),
   },
-  async ({ url, mainContentOnly, includeLinks, includeImages }) => {
+  async ({ url, mainContentOnly, includeLinks, includeImages, jsRender }) => {
     try {
-      const result = await scrapePage(url, { mainContentOnly, includeLinks, includeImages });
+      const result = await scrapePage(url, { mainContentOnly, includeLinks, includeImages, jsRender });
       const lines = [
         `# ${result.title}`,
         result.description ? `> ${result.description}` : "",
@@ -537,12 +626,13 @@ server.tool(
     url: z.string().describe("URL de la page à cloner"),
     outputDir: z.string().optional().describe("Dossier de sortie (défaut: ~/deepcrawl-clones/<domaine>)"),
     depth: z.number().optional().describe("Profondeur de suivi des liens: 0 = page seule, 1 = page + liens directs, 2+ = plus profond (défaut: 0)"),
+    jsRender: z.boolean().optional().describe("Rendre le JavaScript via Playwright pour les sites dynamiques/SPA (défaut: false)"),
   },
-  async ({ url, outputDir, depth }) => {
+  async ({ url, outputDir, depth, jsRender }) => {
     try {
       const baseUrl = new URL(url);
       const dir = outputDir || join(homedir(), "deepcrawl-clones", baseUrl.hostname.replace(/\./g, "_"));
-      const result = await clonePage(url, dir, { depth: depth ?? 0, sameOriginOnly: true });
+      const result = await clonePage(url, dir, { depth: depth ?? 0, sameOriginOnly: true, jsRender: jsRender ?? false });
       
       const lines = [
         `# Clone terminé`,
@@ -574,10 +664,11 @@ server.tool(
     url: z.string().describe("URL de départ du crawl"),
     maxPages: z.number().optional().describe("Nombre max de pages à crawler (défaut: 20, max: 100)"),
     includeImages: z.boolean().optional().describe("Inclure les URLs des images (défaut: false)"),
+    jsRender: z.boolean().optional().describe("Rendre le JavaScript via Playwright (défaut: false)"),
   },
-  async ({ url, maxPages, includeImages }) => {
+  async ({ url, maxPages, includeImages, jsRender }) => {
     try {
-      const result = await crawlSite(url, { maxPages, includeImages });
+      const result = await crawlSite(url, { maxPages, includeImages, jsRender });
       const lines = [
         `# Crawl terminé: ${result.totalPages} pages`,
         "",
@@ -626,6 +717,7 @@ server.tool(
 
 // ─── Start ────────────────────────────────────────────────────────────
 
+await detectPlaywright();
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error(`${SERVER_NAME} v${SERVER_VERSION} running on stdio`);
+console.error(`${SERVER_NAME} v${SERVER_VERSION} running on stdio${playwrightAvailable ? " (JS rendering: ON)" : " (JS rendering: OFF - install playwright for SPA support)"}`);

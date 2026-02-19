@@ -1,6 +1,6 @@
 {
   "name": "deepcrawl-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server to clone websites, scrape pages to markdown, and crawl entire sites. Free Firecrawl alternative.",
   "type": "module",
   "main": "dist/index.js",
@@ -23,6 +23,9 @@
     "@types/turndown": "^5.0.5",
     "typescript": "^5.7.0"
   },
-  "keywords": ["mcp", "crawler", "scraper", "clone", "firecrawl", "website", "markdown"],
+  "optionalDependencies": {
+    "playwright": "^1.50.0"
+  },
+  "keywords": ["mcp", "crawler", "scraper", "clone", "firecrawl", "website", "markdown", "playwright"],
   "license": "MIT"
 }
