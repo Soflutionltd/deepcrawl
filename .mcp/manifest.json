@@ -1,0 +1,49 @@
+{
+  "manifest_version": "0.3",
+  "name": "deepcrawl",
+  "display_name": "Deepcrawl",
+  "version": "0.0.0",
+  "description": "Clone websites, scrape pages to markdown and crawl whole sites. A free Firecrawl alternative.",
+  "long_description": "Deepcrawl scrapes any page to clean markdown, crawls entire sites, and clones websites. It runs locally, with no API key.",
+  "author": {
+    "name": "Soflution Ltd",
+    "email": "contact@soflution.com",
+    "url": "https://github.com/Soflutionltd"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Soflutionltd/deepcrawl.git"
+  },
+  "homepage": "https://github.com/Soflutionltd/deepcrawl",
+  "support": "https://github.com/Soflutionltd/deepcrawl/issues",
+  "license": "MIT",
+  "keywords": [
+    "scraping",
+    "crawler",
+    "markdown",
+    "web",
+    "clone",
+    "firecrawl"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

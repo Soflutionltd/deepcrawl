@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Soflutionltd/deepcrawl",
+  "title": "Deepcrawl",
+  "description": "Clone websites, scrape pages to markdown and crawl whole sites. A free Firecrawl alternative.",
+  "version": "0.0.0",
+  "websiteUrl": "https://github.com/Soflutionltd/deepcrawl",
+  "repository": {
+    "url": "https://github.com/Soflutionltd/deepcrawl",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/Soflutionltd/deepcrawl/releases/download/TAG/deepcrawl.mcpb",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
