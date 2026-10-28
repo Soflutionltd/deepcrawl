@@ -1,11 +1,11 @@
 {
   "name": "deepcrawl-mcp",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server to clone websites, scrape pages to markdown, and crawl entire sites. Free Firecrawl alternative.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "deepcrawl-mcp": "dist/index.js"
+    "deepcrawl-mcp": "bin/supervise.cjs"
   },
   "scripts": {
     "build": "tsc",
@@ -26,6 +26,27 @@
   "optionalDependencies": {
     "playwright": "^1.50.0"
   },
-  "keywords": ["mcp", "crawler", "scraper", "clone", "firecrawl", "website", "markdown", "playwright"],
-  "license": "MIT"
+  "keywords": [
+    "mcp",
+    "crawler",
+    "scraper",
+    "clone",
+    "firecrawl",
+    "website",
+    "markdown",
+    "playwright"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Soflutionltd/deepcrawl.git"
+  },
+  "homepage": "https://github.com/Soflutionltd/deepcrawl#readme",
+  "bugs": {
+    "url": "https://github.com/Soflutionltd/deepcrawl/issues"
+  },
+  "author": "Soflution Ltd",
+  "engines": {
+    "node": ">=18.17"
+  }
 }

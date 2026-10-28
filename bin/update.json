@@ -1,0 +1,5 @@
+{
+  "package": "deepcrawl-mcp",
+  "server": "dist/index.js",
+  "passthrough": []
+}

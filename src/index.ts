@@ -12,6 +12,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { attachUpdateNotice, startUpdateCheck } from "./update-notice.js";
 import { z } from "zod";
 import * as cheerio from "cheerio";
 import TurndownService from "turndown";
@@ -21,7 +22,7 @@ import { URL } from "url";
 import { homedir } from "os";
 
 const SERVER_NAME = "deepcrawl-mcp";
-const SERVER_VERSION = "1.1.0";
+const SERVER_VERSION = "1.1.1";
 const MAX_CONCURRENT = 5;
 const DEFAULT_TIMEOUT = 15000;
 const MAX_PAGES = 100;
@@ -718,6 +719,7 @@ server.tool(
 // ─── Start ────────────────────────────────────────────────────────────
 
 await detectPlaywright();
-const transport = new StdioServerTransport();
+const transport = attachUpdateNotice(new StdioServerTransport());
+startUpdateCheck("deepcrawl-mcp", SERVER_VERSION, "https://github.com/Soflutionltd/deepcrawl");
 await server.connect(transport);
 console.error(`${SERVER_NAME} v${SERVER_VERSION} running on stdio${playwrightAvailable ? " (JS rendering: ON)" : " (JS rendering: OFF - install playwright for SPA support)"}`);

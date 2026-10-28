@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="cursor://anysphere.cursor-deeplink/mcp/install?name=deepcrawl-mcp&config=eyJ0eXBlIjoic3RkaW8iLCJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZXBjcmF3bC1tY3BAbGF0ZXN0Il19"><img src="https://img.shields.io/badge/Install_in-Cursor-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMiAxMmwxMCAxMCAxMC0xMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=" alt="Install in Cursor" /></a>
-  <a href="https://soflution1.github.io/BrandCheck/install.html?name=deepcrawl-mcp&pkg=deepcrawl-mcp"><img src="https://img.shields.io/badge/Install_via-Web-green?style=for-the-badge" alt="Install via Web" /></a>
+  <a href="https://soflutionltd.github.io/BrandCheck/install.html?name=deepcrawl-mcp&pkg=deepcrawl-mcp"><img src="https://img.shields.io/badge/Install_via-Web-green?style=for-the-badge" alt="Install via Web" /></a>
 </p>
 
 ---
@@ -33,6 +33,12 @@
   }
 }
 ```
+
+### Automatic updates
+
+Every install below keeps itself up to date, without restarting Claude or Cursor. The MCP client talks to a small supervisor (`bin/supervise.cjs`) that stays connected while the server runs behind it. At start-up and every 6 hours it asks npm for the latest `deepcrawl-mcp`, installs it in the background in `~/.soflution/mcp/deepcrawl-mcp/`, and switches over as soon as no request is in flight (the client is told the tool list may have changed). A version that fails to start is rolled back at once and never picked again on that machine. npm checks the integrity of every download, and releases are published from GitHub Actions with provenance.
+
+The only network call is that version check to `registry.npmjs.org`; nothing about your machine or your use is sent. Turn it off with `NO_UPDATE_NOTIFIER=1` (or `SOFLUTION_AUTO_UPDATE=0`). Started directly with `node dist/...`, deepcrawl-mcp does not update itself and only mentions a newer version in its first tool result.
 
 **CLI:**
 ```bash
@@ -118,8 +124,8 @@ Once installed, deepcrawl auto-detects Playwright and enables JS rendering. Use 
 
 ## Also by Soflution
 
-- **[brandcheck](https://github.com/Soflution1/BrandCheck)** - Check brand name availability across 27 platforms
-- **[depsonar](https://github.com/Soflution1/depsonar)** - Dependency audit, security scan, license check
+- **[brandcheck](https://github.com/Soflutionltd/BrandCheck)** - Check brand name availability across 27 platforms
+- **[depsonar](https://github.com/Soflutionltd/depsonar)** - Dependency audit, security scan, license check
 
 ## License
 
